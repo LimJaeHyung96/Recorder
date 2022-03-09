@@ -10,12 +10,20 @@ import android.widget.Button
 
 class MainActivity : AppCompatActivity() {
 
+    private val visualizerView : SoundVisualizerView by lazy {
+        findViewById(R.id.soundVisualizerView)
+    }
+
     private val recordButton: RecordButton by lazy {
         findViewById(R.id.recordButton)
     }
 
     private val resetButton : Button by lazy {
         findViewById(R.id.resetButton)
+    }
+
+    private val recordTimeTextView : CountUpTextView by lazy {
+        findViewById(R.id.recordTimeTextView)
     }
 
     private val requiredPermission = arrayOf(
@@ -72,6 +80,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindView() {
+        visualizerView.onRequestCurrentAmplitude = {
+            recorder?.maxAmplitude ?: 0
+        }
         recordButton.setOnClickListener {
             when (state) {
                 State.BEFORE_RECORDING -> {
@@ -91,6 +102,8 @@ class MainActivity : AppCompatActivity() {
 
         resetButton.setOnClickListener {
             stopPlaying()
+            visualizerView.clearVisualization()
+            recordTimeTextView.clearCountTime()
             state = State.BEFORE_RECORDING
         }
     }
@@ -109,6 +122,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         recorder?.start()
+        visualizerView.startVisualizing(false)
+        recordTimeTextView.startCountUp()
         state = State.ON_RECORDING
     }
 
@@ -118,6 +133,8 @@ class MainActivity : AppCompatActivity() {
             release()
         }
         recorder = null
+        visualizerView.stopVisualizing()
+        recordTimeTextView.stopCountUp()
         state = State.AFTER_RECORDING
     }
 
@@ -127,13 +144,21 @@ class MainActivity : AppCompatActivity() {
             prepare()
             //미디어를 준비하는 동안 화면이 멈추기 때문에 큰 용량의 미디어를 불러올 땐 prepareAsync()를 쓰고 로딩하는 화면을 보여주는 등의 동작 필요
         }
+        player?.setOnCompletionListener {
+            stopPlaying()
+            state = State.AFTER_RECORDING
+        }
         player?.start()
+        visualizerView.startVisualizing(true)
+        recordTimeTextView.startCountUp()
         state = State.ON_PLAYING
     }
 
     private fun stopPlaying() {
         player?.release() //release를 하면 언제든지 end state로 가기 때문에 stop을 하고 release할 필요 없이 바로 release함
         player = null
+        visualizerView.stopVisualizing()
+        recordTimeTextView.stopCountUp()
         state = State.AFTER_RECORDING
     }
 
